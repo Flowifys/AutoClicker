@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CPS</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #eee; font-family: Consolas, monospace; }
+  #pad { position: fixed; inset: 0; user-select: none; cursor: crosshair;
+         display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+  #cps { font-size: 120px; font-weight: bold; line-height: 1; }
+  .lbl { color: #888; font-size: 14px; }
+  #row { display: flex; gap: 32px; font-size: 22px; margin-top: 16px; }
+  #row div { text-align: center; }
+</style>
+</head>
+<body>
+<div id="pad">
+  <div id="cps">0</div>
+  <div class="lbl">clicks per second (last 1 s)</div>
+  <div id="row">
+    <div><span id="peak">0</span><div class="lbl">peak</div></div>
+    <div><span id="avg">0</span><div class="lbl">average</div></div>
+    <div><span id="total">0</span><div class="lbl">total</div></div>
+    <div><span id="time">0.0</span><div class="lbl">seconds</div></div>
+  </div>
+  <div class="lbl" style="margin-top:24px">Click anywhere. Press R to reset.</div>
+</div>
+<script>
+// Per click: add 1 to a number. Nothing else. The screen updates 5 times a second.
+var total = 0, first = 0, peak = 0;
+var ring = new Int32Array(10), slot = 0, lastTotal = 0;   // 10 x 100 ms = rolling 1 second
+
+var pad = document.getElementById('pad');
+pad.addEventListener('mousedown', function (e) {
+  e.preventDefault();
+  if (!first) first = performance.now();
+  total++;
+});
+pad.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+// every 100 ms, record how many clicks came in
+setInterval(function () {
+  ring[slot] = total - lastTotal; lastTotal = total; slot = (slot + 1) % 10;
+}, 100);
+
+var $ = function (id) { return document.getElementById(id); };
+setInterval(function () {
+  var cps = 0; for (var i = 0; i < 10; i++) cps += ring[i];
+  if (cps > peak) peak = cps;
+  var secs = first ? (performance.now() - first) / 1000 : 0;
+  $('cps').textContent = cps;
+  $('peak').textContent = peak;
+  $('avg').textContent = secs > 0.5 ? Math.round(total / secs) : 0;
+  $('total').textContent = total;
+  $('time').textContent = secs.toFixed(1);
+}, 200);
+
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'r' || e.key === 'R') { total = lastTotal = first = peak = 0; ring.fill(0); }
+});
+</script>
+</body>
+</html>
